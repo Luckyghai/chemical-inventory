@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Equipment Management - Lab Pro</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        :root {
+            --primary-gradient: linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%);
+            --glass-bg: rgba(255, 255, 255, 0.95);
+        }
+
+        body {
+            background-color: #f0f2f5;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .stat-card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+            transition: transform 0.3s ease;
+            overflow: hidden;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .icon-box {
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 12px;
+            font-size: 1.5rem;
+        }
+
+        .main-card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+            background: var(--glass-bg);
+        }
+
+        .table-hover tbody tr {
+            transition: all 0.2s;
+        }
+
+        .table-hover tbody tr:hover {
+            background-color: rgba(132, 250, 176, 0.05);
+            transform: scale(1.005);
+        }
+
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1055;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container py-4">
+        <!-- Header -->
+        <header class="d-flex justify-content-between align-items-center mb-5">
+            <div>
+                <h2 class="fw-bold mb-0"><i class="fa-solid fa-microscope text-success"></i> Equipment Management</h2>
+                <p class="text-muted small">Track and maintain laboratory equipment</p>
+            </div>
+
+            <div class="d-flex align-items-center gap-3">
+                <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary shadow-sm bg-white">
+                    <i class="fa-solid fa-house me-2"></i>Home
+                </a>
+                <a href="/equipment/form" class="btn btn-success shadow-sm text-white">
+                    <i class="fa-solid fa-plus me-2"></i>Add Equipment
+                </a>
+                <a href="{{ url_for('logout') }}" class="btn btn-danger shadow-sm">
+                    <i class="fa-solid fa-sign-out-alt"></i>
+                </a>
+            </div>
+        </header>
+
+        <!-- Stats Row -->
+        <div class="row g-4 mb-4">
+            <div class="col-md-4">
+                <div class="card stat-card">
+                    <div class="card-body d-flex align-items-center">
+                        <div class="icon-box bg-success bg-opacity-10 text-success me-3">
+                            <i class="fa-solid fa-boxes-stacked"></i>
+                        </div>
+                        <div>
+                            <h6 class="text-muted mb-0">Total Units</h6>
+                            <h3 class="fw-bold mb-0" id="statTotal">0</h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card stat-card">
+                    <div class="card-body d-flex align-items-center">
+                        <div class="icon-box bg-warning bg-opacity-10 text-warning me-3">
+                            <i class="fa-solid fa-screwdriver-wrench"></i>
+                        </div>
+                        <div>
+                            <h6 class="text-muted mb-0">In Maintenance</h6>
+                            <h3 class="fw-bold mb-0" id="statMaint">0</h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card stat-card">
+                    <div class="card-body d-flex align-items-center">
+                        <div class="icon-box bg-danger bg-opacity-10 text-danger me-3">
+                            <i class="fa-solid fa-circle-xmark"></i>
+                        </div>
+                        <div>
+                            <h6 class="text-muted mb-0">Broken/Retired</h6>
+                            <h3 class="fw-bold mb-0" id="statBroken">0</h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filters & Search -->
+        <div class="card main-card mb-4">
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-8">
+                        <div class="input-group">
+                            <span class="input-group-text bg-white border-end-0"><i
+                                    class="fa-solid fa-search text-muted"></i></span>
+                            <input type="text" id="searchInput" class="form-control border-start-0"
+                                placeholder="Search by name, model, or manufacturer...">
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <select id="locationFilter" class="form-select">
+                            <option value="">All Locations</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Equipment Table -->
+        <div class="card main-card overflow-hidden">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="ps-4">Equipment Name</th>
+                            <th>Model/Serial</th>
+                            <th>Status</th>
+                            <th>Location</th>
+                            <th>Next Maintenance</th>
+                            <th class="text-end pe-4">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="equipmentTableBody">
+                        <!-- Rows injected by JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Detailed View Modal -->
+    <div class="modal fade" id="quickViewModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg" style="border-radius: 12px; overflow: hidden;">
+                <div class="modal-header bg-light border-bottom-0 pb-0 d-block">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div>
+                            <small class="text-uppercase text-muted fw-bold tracking-wide">Machine Details</small>
+                            <h2 class="modal-title fw-bold mt-1" id="modalName">Equipment Name</h2>
+                            <div class="text-muted">
+                                <i class="fa-solid fa-barcode me-1"></i> Model: <span id="modalModel">---</span>
+                            </div>
+                        </div>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <ul class="nav nav-tabs nav-fill" id="equipTabs" role="tablist">
+                        <li class="nav-item">
+                            <button class="nav-link active fw-semibold" data-bs-toggle="tab" data-bs-target="#overview"
+                                type="button">General Info</button>
+                        </li>
+                        <li class="nav-item">
+                            <button class="nav-link fw-semibold" data-bs-toggle="tab" data-bs-target="#maintenance"
+                                type="button">Maintenance</button>
+                        </li>
+                        <li class="nav-item">
+                            <button class="nav-link fw-semibold" data-bs-toggle="tab" data-bs-target="#manage"
+                                type="button">Manage</button>
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="modal-body p-4 bg-white">
+                    <div class="tab-content">
+                        <div class="tab-pane fade show active" id="overview">
+                            <div class="row g-4">
+                                <div class="col-md-6">
+                                    <label class="text-muted small text-uppercase fw-bold mb-1">Manufacturer</label>
+                                    <p class="fs-5 mb-0" id="modalManufacturer">---</p>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="text-muted small text-uppercase fw-bold mb-1">Location</label>
+                                    <p class="fs-5 mb-0" id="modalLoc">---</p>
+                                </div>
+                                <div class="col-md-12">
+                                    <label class="text-muted small text-uppercase fw-bold mb-1">Description</label>
+                                    <p id="modalDesc">---</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="tab-pane fade" id="maintenance">
+                            <div class="row g-4">
+                                <div class="col-md-6">
+                                    <label class="text-muted small text-uppercase fw-bold mb-1">Last Maintenance</label>
+                                    <p id="modalLastMaint">---</p>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="text-muted small text-uppercase fw-bold mb-1">Next Maintenance</label>
+                                    <p id="modalNextMaint" class="fw-bold">---</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="tab-pane fade" id="manage">
+                            <div class="d-flex flex-column gap-3">
+                                <button class="btn btn-outline-primary w-100" id="modalEditBtn">Edit Details</button>
+                                <button class="btn btn-danger w-100" id="modalDeleteBtn">Delete Equipment</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div class="toast-container">
+        <div id="liveToast" class="toast align-items-center text-white bg-success border-0 shadow-lg" role="alert">
+            <div class="d-flex">
+                <div class="toast-body" id="toastMessage">Success!</div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="../static/js/equipment.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            EquipmentApp.initDashboard();
+        });
+    </script>
+</body>
+
+</html>

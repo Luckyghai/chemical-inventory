@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Resource Management - Laboratory System</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-blue: #2a5298;
+            --secondary-red: #e74c3c;
+            --past-gray: #dfe6e9;
+            --past-text: #b2bec3;
+            --accent-blue: #0984e3;
+        }
+
+        body {
+            background-color: #f8f9fa;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            color: #2d3436;
+        }
+
+        .navbar {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .nav-link {
+            color: rgba(255, 255, 255, 0.8) !important;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+
+        .nav-link:hover,
+        .nav-link.active {
+            color: #fff !important;
+            transform: translateY(-1px);
+        }
+
+        .card {
+            border: none;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            transition: transform 0.2s;
+        }
+
+        /* Calendar Styles */
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 10px;
+            padding: 20px;
+        }
+
+        .calendar-day {
+            min-height: 120px;
+            background: #fff;
+            border-radius: 8px;
+            padding: 10px;
+            border: 1px solid #eee;
+            position: relative;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .calendar-day:hover:not(.past-date) {
+            background: #f1f4f9;
+        }
+
+        .day-number {
+            font-weight: bold;
+            font-size: 1.1rem;
+            margin-bottom: 5px;
+            display: block;
+        }
+
+        .past-date {
+            background-color: var(--past-gray);
+            color: var(--past-text);
+            cursor: not-allowed;
+        }
+
+        .today {
+            border: 2px solid var(--accent-blue);
+        }
+
+        .booked-day {
+            background-color: #ebf5ff;
+            border-color: var(--accent-blue);
+        }
+
+        .booked-lab {
+            border-left: 4px solid var(--accent-blue);
+        }
+
+        .booked-instrument {
+            border-left: 4px solid var(--secondary-red);
+        }
+
+        .tag {
+            font-size: 0.75rem;
+            padding: 2px 6px;
+            border-radius: 4px;
+            color: white;
+            display: block;
+            margin-bottom: 4px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .tag-lab {
+            background-color: var(--accent-blue);
+        }
+
+        .tag-instrument {
+            background-color: var(--secondary-red);
+        }
+
+        /* Booking System */
+        .selection-card {
+            cursor: pointer;
+            border: 2px solid transparent;
+            text-align: center;
+            padding: 30px;
+        }
+
+        .selection-card:hover {
+            border-color: var(--accent-blue);
+            background-color: #f1f4f9;
+        }
+
+        .selection-card.selected {
+            border-color: var(--accent-blue);
+            background-color: #ebf5ff;
+        }
+
+        .selection-icon {
+            font-size: 3rem;
+            margin-bottom: 15px;
+            color: var(--primary-blue);
+        }
+
+        /* Views */
+        .view-section {
+            display: none;
+        }
+
+        .view-section.active {
+            display: block;
+        }
+
+        .btn-primary {
+            background-color: var(--primary-blue);
+            border: none;
+        }
+
+        .btn-primary:hover {
+            background-color: #1e3c72;
+        }
+    </style>
+</head>
+
+<body>
+
+    <nav class="navbar navbar-expand-lg navbar-dark mb-4">
+        <div class="container">
+            <a class="navbar-brand fw-bold" href="#">
+                <i class="fa-solid fa-calendar-check me-2"></i>Lab Resource Mgmt
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="#" onclick="switchView('dashboard')">Dashboard</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" onclick="switchView('booking')">New Booking</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" onclick="switchView('management')">Management</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('dashboard') }}">Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link text-danger" href="{{ url_for('logout') }}">Logout</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container pb-5">
+
+        <!-- Dashboard Section -->
+        <section id="dashboard" class="view-section active">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2 class="fw-bold">Laboratory Schedule</h2>
+                <div class="d-flex align-items-center gap-3">
+                    <button class="btn btn-outline-primary btn-sm" onclick="changeMonth(-1)">
+                        <i class="fa-solid fa-chevron-left"></i> Previous
+                    </button>
+                    <div id="current-month-label" class="h4 text-muted mb-0"
+                        style="min-width: 180px; text-align: center;"></div>
+                    <button class="btn btn-outline-primary btn-sm" onclick="changeMonth(1)">
+                        Next <i class="fa-solid fa-chevron-right"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="calendar-grid-header row text-center fw-bold py-2 border-bottom bg-light mx-0"
+                    style="border-radius: 12px 12px 0 0;">
+                    <div class="col">Mon</div>
+                    <div class="col">Tue</div>
+                    <div class="col">Wed</div>
+                    <div class="col">Thu</div>
+                    <div class="col">Fri</div>
+                    <div class="col">Sat</div>
+                    <div class="col">Sun</div>
+                </div>
+                <div id="calendar-body" class="calendar-grid">
+                    <!-- JS will generate days here -->
+                </div>
+            </div>
+
+            <div class="mt-3 d-flex gap-3">
+                <span><i class="fa-solid fa-square text-primary"></i> Lab Room</span>
+                <span><i class="fa-solid fa-square text-danger"></i> Instrument</span>
+            </div>
+        </section>
+
+        <!-- Booking Section -->
+        <section id="booking" class="view-section">
+            <h2 class="fw-bold mb-4">Create New Booking</h2>
+
+            <!-- Phase 1: Categorization -->
+            <div id="phase1">
+                <p class="text-muted mb-4">Phase 1: Select the type of resource you want to book.</p>
+                <div class="row g-4 justify-content-center">
+                    <div class="col-md-5">
+                        <div class="card selection-card" onclick="selectType('Lab')">
+                            <div class="selection-icon"><i class="fa-solid fa-door-open"></i></div>
+                            <h3>Lab Room</h3>
+                            <p>Reserve a specific laboratory room for your research.</p>
+                        </div>
+                    </div>
+                    <div class="col-md-5">
+                        <div class="card selection-card" onclick="selectType('Instrument')">
+                            <div class="selection-icon"><i class="fa-solid fa-microscope"></i></div>
+                            <h3>Instrument</h3>
+                            <p>Book specific equipment or laboratory instruments.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Phase 2: Data Input -->
+            <div id="phase2" style="display: none;">
+                <div class="row justify-content-center">
+                    <div class="col-md-8">
+                        <div class="card p-4">
+                            <h4 id="form-title" class="mb-4">Booking Details</h4>
+                            <form id="booking-form">
+                                <div class="mb-3">
+                                    <label id="resource-name-label" class="form-label">Resource Name</label>
+                                    <input type="text" id="resource-name" class="form-control"
+                                        placeholder="e.g. Organic Chem Lab A" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Researcher Name</label>
+                                    <input type="text" id="researcher-name" class="form-control"
+                                        placeholder="Enter your name" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Booking Date</label>
+                                    <input type="date" id="booking-date" class="form-control" required>
+                                </div>
+                                <div class="mt-4 d-flex justify-content-between">
+                                    <button type="button" class="btn btn-outline-secondary"
+                                        onclick="backToPhase1()">Back</button>
+                                    <button type="button" class="btn btn-primary px-4" onclick="saveData()">Confirm
+                                        Booking</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Management Section -->
+        <section id="management" class="view-section">
+            <h2 class="fw-bold mb-4">Management View</h2>
+            <div class="card p-0 overflow-hidden">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Type</th>
+                            <th>Resource</th>
+                            <th>Researcher</th>
+                            <th>Date</th>
+                            <th class="text-end">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="management-table-body">
+                        <!-- JS will rebuild rows here -->
+                    </tbody>
+                </table>
+            </div>
+            <div id="empty-state" class="text-center py-5" style="display: none;">
+                <i class="fa-solid fa-calendar-xmark fa-4x mb-3 text-muted"></i>
+                <p class="h5 text-muted">No bookings found.</p>
+            </div>
+        </section>
+
+    </div>
+
+    <!-- Booking Details Modal -->
+    <div class="modal fade" id="detailsModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Bookings for <span id="modal-date-label"></span></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="modal-body-content">
+                    <!-- Bookings for specific date -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        // State Management
+        let selectedType = '';
+        let today = new Date();
+        today.setHours(0, 0, 0, 0);
+        let allBookings = []; // Global cache for bookings
+
+        // Navigation state
+        let viewYear = new Date().getFullYear();
+        let viewMonth = new Date().getMonth();
+
+        // --- Initialization ---
+        document.addEventListener('DOMContentLoaded', async () => {
+            await fetchBookings(); // Fetch initial data
+            initCalendar();
+            updateTable();
+
+            // Set min date for booking
+            const dateInput = document.getElementById('booking-date');
+            if (dateInput) {
+                const todayStr = getLocalDateString(new Date());
+                dateInput.setAttribute('min', todayStr);
+            }
+
+            updateMonthLabel();
+        });
+
+        // Helper for reliable YYYY-MM-DD
+        function getLocalDateString(date) {
+            const y = date.getFullYear();
+            const m = String(date.getMonth() + 1).padStart(2, '0');
+            const d = String(date.getDate()).padStart(2, '0');
+            return `${y}-${m}-${d}`;
+        }
+
+        function updateMonthLabel() {
+            const monthLabel = document.getElementById('current-month-label');
+            if (monthLabel) {
+                const viewDate = new Date(viewYear, viewMonth, 1);
+                monthLabel.innerText =
+                    new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric' }).format(viewDate);
+            }
+        }
+
+        async function fetchBookings() {
+            try {
+                const response = await fetch('/api/bookings');
+                allBookings = await response.json();
+            } catch (err) {
+                console.error("Failed to fetch bookings:", err);
+            }
+        }
+
+        // --- Navigation ---
+        function changeMonth(delta) {
+            viewMonth += delta;
+            if (viewMonth > 11) {
+                viewMonth = 0;
+                viewYear++;
+            } else if (viewMonth < 0) {
+                viewMonth = 11;
+                viewYear--;
+            }
+            updateMonthLabel();
+            initCalendar();
+        }
+
+        async function switchView(viewId) {
+            document.querySelectorAll('.view-section').forEach(s => s.classList.remove('active'));
+            document.getElementById(viewId).classList.add('active');
+
+            document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+            const activeLink = Array.from(document.querySelectorAll('.nav-link'))
+                .find(l => l.innerText.toLowerCase().includes(viewId.toLowerCase()));
+            if (activeLink) activeLink.classList.add('active');
+
+            // Refresh data on view change
+            await fetchBookings();
+
+            if (viewId === 'management') updateTable();
+            if (viewId === 'dashboard') initCalendar();
+        }
+
+        // --- Calendar Logic ---
+        function initCalendar() {
+            const calendarBody = document.getElementById('calendar-body');
+            if (!calendarBody) return;
+            calendarBody.innerHTML = '';
+
+            // JS Loop for 1 to 31 as requested
+            for (let i = 1; i <= 31; i++) {
+                const dayDiv = document.createElement('div');
+                dayDiv.className = 'calendar-day';
+
+                const dateObj = new Date(viewYear, viewMonth, i);
+
+                // Ensure the date is valid for the current month
+                // (Optional: handle months with < 31 days visually, but keep for loop 1-31)
+                if (dateObj.getMonth() !== viewMonth) {
+                    dayDiv.classList.add('past-date'); // Hide or gray out ghost days
+                    dayDiv.style.opacity = '0.3';
+                    dayDiv.style.pointerEvents = 'none';
+                }
+
+                // Check if it is a real past date relative to TODAY
+                const todayTime = today.getTime();
+                const dayTime = dateObj.getTime();
+
+                if (dayTime < todayTime) {
+                    dayDiv.classList.add('past-date');
+                } else if (dayTime === todayTime) {
+                    dayDiv.classList.add('today');
+                }
+
+                dayDiv.onclick = () => showDateDetails(i);
+                dayDiv.innerHTML = `<span class="day-number">${i}</span>`;
+
+                // Pull data from cache using local date string
+                const dateStr = getLocalDateString(dateObj);
+                const dayBookings = allBookings.filter(b => b.booking_date === dateStr);
+
+                if (dayBookings.length > 0) {
+                    dayDiv.classList.add('booked-day');
+                    if (dayBookings.some(b => b.type === 'Lab')) dayDiv.classList.add('booked-lab');
+                    if (dayBookings.some(b => b.type === 'Instrument')) dayDiv.classList.add('booked-instrument');
+                }
+
+                dayBookings.forEach(b => {
+                    const tag = document.createElement('span');
+                    tag.className = `tag ${b.type === 'Lab' ? 'tag-lab' : 'tag-instrument'}`;
+                    tag.innerText = b.resource_name;
+                    dayDiv.appendChild(tag);
+                });
+
+                calendarBody.appendChild(dayDiv);
+            }
+        }
+
+        function showDateDetails(day) {
+            const dateObj = new Date(viewYear, viewMonth, day);
+            const dateStr = getLocalDateString(dateObj);
+
+            const dayBookings = allBookings.filter(b => b.booking_date === dateStr);
+
+            document.getElementById('modal-date-label').innerText = dateObj.toDateString();
+            const container = document.getElementById('modal-body-content');
+
+            if (dayBookings.length === 0) {
+                container.innerHTML = '<p class="text-muted text-center pt-3">No reservations for this day.</p>';
+            } else {
+                container.innerHTML = dayBookings.map(b => `
+                    <div class="alert ${b.type === 'Lab' ? 'alert-primary' : 'alert-danger'} d-flex justify-content-between align-items-center mb-2">
+                        <div>
+                            <strong>${b.type}:</strong> ${b.resource_name}<br>
+                            <small>Researcher: ${b.researcher_name}</small><br>
+                            <small class="text-muted">ID: ${b.id}</small>
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            const modalElement = document.getElementById('detailsModal');
+            if (modalElement) {
+                const modal = new bootstrap.Modal(modalElement);
+                modal.show();
+            }
+        }
+
+        // --- Booking Logic ---
+        function selectType(type) {
+            selectedType = type;
+            document.querySelectorAll('.selection-card').forEach(c => c.classList.remove('selected'));
+            event.currentTarget.classList.add('selected');
+
+            // Phase transition
+            setTimeout(() => {
+                document.getElementById('phase1').style.display = 'none';
+                document.getElementById('phase2').style.display = 'block';
+
+                // Dynamic Labelling
+                const label = document.getElementById('resource-name-label');
+                label.innerText = type === 'Lab' ? 'Lab Room Name' : 'Instrument Name';
+                document.getElementById('resource-name').placeholder =
+                    type === 'Lab' ? 'e.g. Chemical Lab 101' : 'e.g. Mass Spectrometer';
+                document.getElementById('form-title').innerText = `New ${type} Booking`;
+            }, 300);
+        }
+
+        function backToPhase1() {
+            document.getElementById('phase1').style.display = 'block';
+            document.getElementById('phase2').style.display = 'none';
+            selectedType = '';
+        }
+
+        async function saveData() {
+            const resourceName = document.getElementById('resource-name').value;
+            const researcherName = document.getElementById('researcher-name').value;
+            const bDate = document.getElementById('booking-date').value;
+
+            // Validation
+            if (!resourceName || !researcherName || !bDate) {
+                alert('Please fill in all fields.');
+                return;
+            }
+
+            const newBooking = {
+                type: selectedType,
+                resourceName: resourceName,
+                researcherName: researcherName,
+                date: bDate
+            };
+
+            try {
+                const response = await fetch('/api/bookings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(newBooking)
+                });
+
+                if (response.ok) {
+                    alert('Booking Confirmed!');
+                    document.getElementById('booking-form').reset();
+                    backToPhase1();
+                    await switchView('dashboard');
+                } else {
+                    alert('Failed to save booking.');
+                }
+            } catch (err) {
+                console.error("Save error:", err);
+            }
+        }
+
+        // --- Management Logic ---
+        function updateTable() {
+            const tbody = document.getElementById('management-table-body');
+            if (!tbody) return;
+            const emptyState = document.getElementById('empty-state');
+
+            tbody.innerHTML = '';
+
+            if (allBookings.length === 0) {
+                if (emptyState) emptyState.style.display = 'block';
+                return;
+            }
+
+            if (emptyState) emptyState.style.display = 'none';
+
+
+            allBookings.forEach(b => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td><span class="badge ${b.type === 'Lab' ? 'bg-primary' : 'bg-danger'}">${b.type}</span></td>
+                    <td class="fw-bold">${b.resource_name}</td>
+                    <td>${b.researcher_name}</td>
+                    <td>${new Date(b.booking_date).toLocaleDateString()}</td>
+                    <td class="text-end">
+                        <button class="btn btn-sm btn-outline-danger" onclick="deleteBooking(${b.id})">
+                            <i class="fa-solid fa-trash"></i> Cancel
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        async function deleteBooking(id) {
+            if (!confirm('Are you sure you want to cancel this booking?')) return;
+
+            try {
+                const response = await fetch(`/api/bookings/${id}`, {
+                    method: 'DELETE'
+                });
+
+                if (response.ok) {
+                    await fetchBookings();
+                    updateTable();
+                    initCalendar();
+                } else {
+                    alert('Failed to delete booking.');
+                }
+            } catch (err) {
+                console.error("Delete error:", err);
+            }
+        }
+    </script>
+</body>
+
+</html>
+```

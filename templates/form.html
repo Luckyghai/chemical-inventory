@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Chemical</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="../static/css/style.css">
+</head>
+
+<body>
+
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h2 id="pageTitle">Add Chemical</h2>
+                    <a href="{{ url_for('chemicals') }}" class="btn btn-outline-secondary">Cancel</a>
+                </div>
+
+                <div class="card">
+                    <div class="card-body">
+                        <form id="chemicalForm">
+                            <input type="hidden" id="chemId">
+
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Chemical Name *</label>
+                                    <div class="input-group">
+                                        <input type="text" id="name" class="form-control" required
+                                            placeholder="e.g. Acetone">
+                                        <button class="btn btn-warning text-dark" type="button" id="aiFillBtn">
+                                            <i class="fa-solid fa-wand-magic-sparkles me-1"></i> AI Fill
+                                        </button>
+                                    </div>
+                                    <small class="text-muted" id="aiFeedback" style="display:none;"></small>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">CAS Number *</label>
+                                    <input type="text" id="cas_number" class="form-control" placeholder="e.g. 67-64-1"
+                                        required>
+                                </div>
+                            </div>
+
+                            <div class="row mb-3">
+                                <div class="col-md-4">
+                                    <label class="form-label">Quantity *</label>
+                                    <input type="number" step="0.01" id="quantity" class="form-control" required>
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">Unit *</label>
+                                    <select id="unit" class="form-select">
+                                        <option value="g">g</option>
+                                        <option value="kg">kg</option>
+                                        <option value="ml">ml</option>
+                                        <option value="L">L</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Storage Location</label>
+                                    <select id="location_id" class="form-select" required>
+                                        <!-- Populated by JS -->
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Expiry Date</label>
+                                    <input type="date" id="expiry_date" class="form-control">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Safety Notes</label>
+                                    <input type="text" id="safety_notes" class="form-control"
+                                        placeholder="Flammable, Toxic...">
+                                </div>
+                            </div>
+
+                            <div class="d-grid gap-2">
+                                <button type="submit" class="btn btn-primary btn-lg">Save Chemical</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- FontAwesome required for sparkles icon if not already added in head/layout -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <script src="../static/js/app.js"></script>
+    <script>
+        // Initialize Form logic
+        document.addEventListener('DOMContentLoaded', () => {
+            InventoryApp.initForm();
+
+            // AI Smart Fill Logic
+            const aiBtn = document.getElementById('aiFillBtn');
+            const feedback = document.getElementById('aiFeedback');
+
+            aiBtn.addEventListener('click', async () => {
+                const query = document.getElementById('name').value;
+                if (!query) {
+                    alert('Please enter a chemical name first!');
+                    return;
+                }
+
+                aiBtn.disabled = true;
+                aiBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Thinking...';
+                feedback.style.display = 'none';
+
+                try {
+                    const response = await fetch('/api/ai-lookup', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ query: query })
+                    });
+
+                    const data = await response.json();
+
+                    if (data.error) throw new Error(data.error);
+
+                    // Populate Fields
+                    if (data.cas_number) document.getElementById('cas_number').value = data.cas_number;
+                    if (data.safety_notes) document.getElementById('safety_notes').value = data.safety_notes;
+
+                    // Expiry Date Logic
+                    if (data.expiry_months) {
+                        const date = new Date();
+                        date.setMonth(date.getMonth() + data.expiry_months);
+                        document.getElementById('expiry_date').value = date.toISOString().split('T')[0];
+                    }
+
+                    feedback.style.display = 'block';
+                    feedback.className = 'text-success mt-1 d-block';
+                    feedback.innerHTML = `✨ Found info for: ${query}. Storage suggestion: <strong>${data.recommended_storage}</strong>`;
+
+                } catch (err) {
+                    // Check if 503 (Missing Key)
+                    console.error(err);
+                    feedback.style.display = 'block';
+                    feedback.className = 'text-danger mt-1 d-block';
+                    feedback.innerText = 'AI Error: ' + err.message;
+                } finally {
+                    aiBtn.disabled = false;
+                    aiBtn.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles me-1"></i> AI Fill';
+                }
+            });
+        });
+    </script>
+</body>
+
+</html>

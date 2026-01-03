@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lab Inventory Pro - Home</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
+    <style>
+        .hero-section {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            padding: 100px 0;
+            text-align: center;
+        }
+
+        .feature-card {
+            transition: transform 0.3s;
+            height: 100%;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-5px);
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="#">Lab Inventory Pro</a>
+            <div class="d-flex">
+                {% if session.get('user_id') %}
+                <a href="/dashboard" class="btn btn-outline-light me-2">Dashboard</a>
+                <a href="/logout" class="btn btn-warning">Logout</a>
+                {% else %}
+                <a href="/login" class="btn btn-outline-light me-2">Login</a>
+                <a href="/signup" class="btn btn-primary">Sign Up</a>
+                {% endif %}
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <div class="hero-section">
+        <div class="container">
+            <h1 class="display-4 fw-bold mb-4">Streamline Your Laboratory Management</h1>
+            <p class="lead mb-5">Efficiently track chemicals, equipment, and resources in one secure place.</p>
+            {% if not session.get('user_id') %}
+            <a href="/signup" class="btn btn-lg btn-light text-primary fw-bold px-5">Get Started</a>
+            {% else %}
+            <a href="/dashboard" class="btn btn-lg btn-light text-primary fw-bold px-5">Go to Dashboard</a>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Features -->
+    <div class="container py-5">
+        <div class="row g-4">
+            <div class="col-md-4">
+                <div class="card feature-card shadow-sm border-0">
+                    <div class="card-body text-center p-4">
+                        <div class="h1 text-primary mb-3">🧪</div>
+                        <h3 class="h5 card-title">Chemical Tracking</h3>
+                        <p class="card-text text-muted">Monitor inventory levels, safety data, and expiration dates with
+                            precision.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card feature-card shadow-sm border-0">
+                    <div class="card-body text-center p-4">
+                        <div class="h1 text-success mb-3">🔬</div>
+                        <h3 class="h5 card-title">Equipment Management</h3>
+                        <p class="card-text text-muted">Keep track of instrument status, maintenance schedules, and
+                            locations.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card feature-card shadow-sm border-0">
+                    <div class="card-body text-center p-4">
+                        <div class="h1 text-warning mb-3">📅</div>
+                        <h3 class="h5 card-title">Resource Booking</h3>
+                        <p class="card-text text-muted">Easy scheduling system for shared lab equipment and facilities.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="bg-light py-4 border-top mt-5">
+        <div class="container text-center text-muted">
+            <small>&copy; 2025 Lab Inventory Pro. All rights reserved.</small>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+
+</html>
