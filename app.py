@@ -19,18 +19,31 @@ if GEMINI_API_KEY:
     genai.configure(api_key=GEMINI_API_KEY)
 
 # --- DATABASE CONFIGURATION ---
-db_config = {
-    'host': 'localhost',
-    'user': os.getenv('USER') or 'luckyghai', # Fallback or env var
-    'password': '', # No password for local peer/trust auth common on Mac
-    'database': 'lab_inventory_db'
-}
+# Check for Render's DATABASE_URL first, fallback to local config
+DATABASE_URL = os.getenv('DATABASE_URL')
+
+if DATABASE_URL:
+    # Running on Render - use DATABASE_URL
+    db_config = DATABASE_URL
+else:
+    # Running locally - use localhost config
+    db_config = {
+        'host': 'localhost',
+        'user': os.getenv('USER') or 'luckyghai', # Fallback or env var
+        'password': '', # No password for local peer/trust auth common on Mac
+        'database': 'lab_inventory_db'
+    }
 
 
 def get_db_connection():
     """Establishes connection to PostgreSQL"""
     try:
-        conn = psycopg2.connect(**db_config)
+        if isinstance(db_config, str):
+            # DATABASE_URL is a string
+            conn = psycopg2.connect(db_config)
+        else:
+            # db_config is a dictionary
+            conn = psycopg2.connect(**db_config)
         return conn
     except Exception as e:
         print(f"Error connecting to PostgreSQL: {e}")
